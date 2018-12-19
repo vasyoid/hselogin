@@ -1,0 +1,73 @@
+#!/usr/bin/python
+
+import wx
+import requests
+import urllib2
+
+
+def test_connection():
+    try:
+        urllib2.urlopen('http://216.58.192.142', timeout=10)
+        return True
+    except urllib2.URLError:
+        return False
+
+
+def create_image(image_name):
+    image = wx.Image(image_name, wx.BITMAP_TYPE_PNG)
+    image.Rescale(image.GetWidth() / 4, image.GetHeight() / 4)
+    image.SetMaskColour(0, 0, 0)
+    image.SetMask(True)
+    return wx.BitmapFromImage(image)
+
+
+class ShapedFrame(wx.Frame):
+
+    def __init__(self, result_status):
+        wx.Frame.__init__(self, None, -1, "Shaped Window", style=wx.FRAME_SHAPED | wx.SIMPLE_BORDER)
+        self.imageName = "images/" + ("success" if result_status else "fail") + ".png"
+        self.hasShape = False
+        self.Move((100, 100))
+        self.timer = wx.Timer(self)
+        self.bmp = create_image(self.imageName)
+        self.SetIcon(wx.Icon("images/hsewifi.ico"))
+        self.SetClientSize((self.bmp.GetWidth(), self.bmp.GetHeight()))
+        wx.ClientDC(self).DrawBitmap(self.bmp, 0, 0, True)
+        self.Bind(wx.EVT_PAINT, self.draw)
+        self.Bind(wx.EVT_WINDOW_CREATE, self.init_window)
+        self.Bind(wx.EVT_TIMER, self.on_close)
+
+    def init_window(self, _):
+        r = wx.RegionFromBitmap(self.bmp)
+        self.hasShape = self.SetShape(r)
+        self.timer.Start(1500)
+
+    def draw(self, _):
+        dc = wx.PaintDC(self)
+        dc.DrawBitmap(self.bmp, 0, 0, True)
+
+    def on_close(self, _):
+        self.Close()
+
+
+def logout():
+    try:
+        requests.post("http://spb-wlc3.hse.ru/logout.html", data={'userStatus': 1})
+    except:
+        pass
+
+
+def login():
+    try:
+        requests.post("https://spb-wlc3.hse.ru/login.html",
+                      data={'username': 'hseguest', 'password': 'hsepassword', 'buttonClicked': 4})
+    except:
+        pass
+
+
+if __name__ == '__main__':
+    logout()
+    login()
+    app = wx.App(False)
+    ShapedFrame(test_connection()).Show()
+    app.MainLoop()
